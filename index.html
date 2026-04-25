@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubAI Pro - AI Subtitle Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        :root {
+            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Custom animation for pulse */
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse-soft {
+            animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-[#0B0E14] text-white min-h-screen flex flex-col p-4 md:p-8 selection:bg-blue-500/30">
+    <!-- Header Navigation -->
+    <nav class="flex justify-between items-center mb-12 max-w-7xl mx-auto w-full">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-400 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                </svg>
+            </div>
+            <span class="text-xl font-bold tracking-tight">SubAI <span class="text-blue-400">Pro</span></span>
+        </div>
+        <div class="hidden md:flex gap-8 text-sm font-medium text-slate-400 items-center">
+            <a href="#" class="hover:text-white transition-colors">Templates</a>
+            <a href="#" class="hover:text-white transition-colors">Languages</a>
+            <a href="#" class="hover:text-white transition-colors">Pricing</a>
+            <a href="#" class="text-white bg-white/5 px-4 py-1.5 rounded-full border border-white/10 hover:bg-white/10 transition-colors">Documentation</a>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-12">
+        
+        <!-- Left Side: Upload & Info (5 columns) -->
+        <div class="lg:col-span-5 flex flex-col gap-8">
+            <div class="space-y-4">
+                <h1 id="hero-title" class="text-5xl md:text-6xl font-extrabold leading-tight tracking-tight opacity-0 transition-all duration-700 translate-y-4">
+                    Perfect Subtitles <br/> 
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-300">in Seconds.</span>
+                </h1>
+                <p id="hero-desc" class="text-slate-400 text-lg max-w-md opacity-0 transition-opacity duration-1000 delay-300">
+                    Our neural engine analyzes tone, pacing, and syntax to generate human-grade .srt files for your video gallery.
+                </p>
+            </div>
+
+            <!-- Upload Area -->
+            <div id="drop-zone" class="relative border-2 border-dashed border-slate-700 bg-slate-900/40 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group hover:border-blue-500/50 hover:bg-blue-500/5">
+                <div id="upload-idle" class="flex flex-col items-center gap-4">
+                    <div class="w-14 h-14 bg-slate-800 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                    </div>
+                    <div class="text-center">
+                        <p class="font-semibold">Click to upload video</p>
+                        <p class="text-sm text-slate-500">MP4, MOV, or MP3 (Max 2GB)</p>
+                    </div>
+                </div>
+
+                <div id="file-info" class="hidden w-full">
+                    <div class="flex items-center justify-between bg-slate-800/40 p-4 rounded-2xl border border-white/5 mb-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <p id="file-name" class="font-bold text-sm truncate max-w-[180px]">video_content.mp4</p>
+                                <p id="file-size" class="text-[10px] text-slate-500 uppercase tracking-wider">12.4 MB</p>
+                            </div>
+                        </div>
+                        <button id="btn-remove" class="p-1 hover:bg-red-500/20 text-red-400 rounded-md transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div id="processing-state" class="hidden space-y-2">
+                        <div class="flex justify-between text-[10px] font-bold uppercase text-blue-400">
+                            <span>Analyzing Audio...</span>
+                            <span id="progress-text">0%</span>
+                        </div>
+                        <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                            <div id="progress-bar" class="h-full bg-blue-500 w-0 transition-all duration-300"></div>
+                        </div>
+                    </div>
+
+                    <button id="btn-generate" class="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center gap-2">
+                        Generate Subtitles
+                    </button>
+                </div>
+
+                <input type="file" id="file-input" class="hidden" accept="audio/*,video/*">
+            </div>
+
+            <!-- Feature Highlights -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-900/60 p-4 rounded-2xl border border-white/5">
+                    <div class="text-blue-400 text-[10px] font-bold uppercase tracking-wider mb-1">Accuracy</div>
+                    <div class="text-xl font-bold">99.4%</div>
+                </div>
+                <div class="bg-slate-900/60 p-4 rounded-2xl border border-white/5">
+                    <div class="text-indigo-400 text-[10px] font-bold uppercase tracking-wider mb-1">Speed</div>
+                    <div class="text-xl font-bold">30x Real-time</div>
+                </div>
+            </div>
+
+            <div id="error-msg" class="hidden p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-red-400 text-xs font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <span id="error-text">An error occurred.</span>
+            </div>
+        </div>
+
+        <!-- Right Side: Preview & Transcription (7 columns) -->
+        <div class="lg:col-span-7 flex flex-col w-full min-h-[500px] bg-slate-900/40 rounded-3xl p-6 border border-white/5 shadow-2xl overflow-hidden relative">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-sm font-bold flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                    <span id="status-indicator" class="w-2 h-2 rounded-full bg-green-500"></span>
+                    Editor Preview
+                </h2>
+                <div class="flex gap-2">
+                    <button class="px-3 py-1 bg-white/5 hover:bg-white/10 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors border border-white/5">Translate</button>
+                    <button class="px-3 py-1 bg-white/5 hover:bg-white/10 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors border border-white/5">Sync</button>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="flex-1 flex flex-col items-center justify-center text-slate-600 gap-4 opacity-50">
+                <div class="w-20 h-20 border-4 border-slate-800 rounded-2xl rotate-12 flex items-center justify-center">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                    </svg>
+                </div>
+                <p class="text-sm font-medium">Upload a file to start transcribing</p>
+            </div>
+
+            <!-- Results View -->
+            <div id="results-view" class="hidden flex-col h-full overflow-hidden">
+                <!-- Mock Video Placeholder -->
+                <div class="aspect-video w-full bg-black rounded-2xl relative overflow-hidden flex items-center justify-center border border-slate-800 mb-6 group cursor-pointer shadow-inner">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                    <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-all">
+                        <svg class="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.333-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"></path>
+                        </svg>
+                    </div>
+                    <div id="preview-subtitle" class="absolute bottom-8 left-4 right-4 text-center">
+                        <span class="bg-black/70 px-4 py-1.5 rounded text-sm md:text-base font-medium border border-white/10 backdrop-blur-md">
+                            Welcome to the future of AI transcription.
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Subtitle List -->
+                <div id="subtitle-list" class="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin">
+                    <!-- JS will populate this -->
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-4 pt-6 mt-4 border-t border-slate-800">
+                    <button id="btn-download" class="flex-1 bg-white text-black font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 group">
+                        <svg class="w-5 h-5 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Download .SRT
+                    </button>
+                    <button class="bg-slate-800 text-white px-6 py-3 rounded-xl hover:bg-slate-700 transition-colors font-bold text-sm">
+                        Burn to Video
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto flex flex-col md:flex-row justify-between items-center text-[10px] text-slate-600 font-medium uppercase tracking-[0.2em] max-w-7xl mx-auto w-full gap-4 pt-8 border-t border-white/5">
+        <div>v2.4.0 Engine Loaded</div>
+        <div class="flex gap-8">
+            <a href="#" class="hover:text-slate-400 transition-colors">Privacy Policy</a>
+            <a href="#" class="hover:text-slate-400 transition-colors">Terms of Service</a>
+            <span class="text-slate-400/50">© 2024 SubAI Labs</span>
+        </div>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const uploadIdle = document.getElementById('upload-idle');
+        const fileInfo = document.getElementById('file-info');
+        const fileName = document.getElementById('file-name');
+        const fileSize = document.getElementById('file-size');
+        const btnRemove = document.getElementById('btn-remove');
+        const btnGenerate = document.getElementById('btn-generate');
+        const processingState = document.getElementById('processing-state');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const emptyState = document.getElementById('empty-state');
+        const resultsView = document.getElementById('results-view');
+        const subtitleList = document.getElementById('subtitle-list');
+        const statusIndicator = document.getElementById('status-indicator');
+        const previewSubtitle = document.getElementById('preview-subtitle');
+        const btnDownload = document.getElementById('btn-download');
+        const errorMsg = document.getElementById('error-msg');
+        const errorText = document.getElementById('error-text');
+
+        // State
+        let selectedFile = null;
+        let isProcessing = false;
+        let subtitles = [];
+
+        // Mock data
+        const MOCK_SUBS = [
+            { id: 1, start: '00:00:01,000', end: '00:00:04,500', text: 'Welcome to the future of AI transcription.' },
+            { id: 2, start: '00:00:05,000', end: '00:00:08,200', text: 'Our neural engine analyzes tone, pacing, and syntax.' },
+            { id: 3, start: '00:00:09,000', end: '00:00:12,100', text: 'Supporting over 45 languages with dialect detection.' },
+            { id: 4, start: '00:00:13,000', end: '00:00:16,500', text: 'Create frame-perfect synchronization in seconds.' },
+            { id: 5, start: '00:00:17,000', end: '00:00:20,000', text: 'The result is a human-grade .srt file ready for use.' }
+        ];
+
+        // Init animations
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                document.getElementById('hero-title').classList.remove('opacity-0', 'translate-y-4');
+                document.getElementById('hero-desc').classList.remove('opacity-0');
+            }, 100);
+        });
+
+        // Event Listeners
+        dropZone.addEventListener('click', () => {
+            if (!selectedFile) fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFile(e.target.files[0]);
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-500/50', 'bg-blue-500/5');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            if (!selectedFile) {
+                dropZone.classList.remove('border-blue-500/50', 'bg-blue-500/5');
+            }
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500/50', 'bg-blue-500/5');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        btnRemove.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetState();
+        });
+
+        btnGenerate.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startProcessing();
+        });
+
+        btnDownload.addEventListener('click', () => {
+            downloadSRT();
+        });
+
+        // Functions
+        function handleFile(file) {
+            if (!file) return;
+
+            const validTypes = ['audio/', 'video/'];
+            const isValid = validTypes.some(type => file.type.startsWith(type));
+
+            if (!isValid) {
+                showError('Please upload a valid audio or video file.');
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+            
+            uploadIdle.classList.add('hidden');
+            fileInfo.classList.remove('hidden');
+            hideError();
+        }
+
+        function resetState() {
+            selectedFile = null;
+            isProcessing = false;
+            subtitles = [];
+            fileInput.value = '';
+            
+            uploadIdle.classList.remove('hidden');
+            fileInfo.classList.add('hidden');
+            processingState.classList.add('hidden');
+            btnGenerate.classList.remove('hidden');
+            emptyState.classList.remove('hidden');
+            resultsView.classList.add('hidden');
+            statusIndicator.classList.remove('animate-pulse-soft', 'bg-orange-500');
+            statusIndicator.classList.add('bg-green-500');
+            progressBar.style.width = '0%';
+        }
+
+        function startProcessing() {
+            if (isProcessing) return;
+            
+            isProcessing = true;
+            btnGenerate.classList.add('hidden');
+            processingState.classList.remove('hidden');
+            statusIndicator.classList.add('animate-pulse-soft', 'bg-orange-500');
+            statusIndicator.classList.remove('bg-green-500');
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 8;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    completeProcessing();
+                }
+                progressBar.style.width = progress + '%';
+                progressText.textContent = Math.round(progress) + '%';
+            }, 300);
+        }
+
+        function completeProcessing() {
+            isProcessing = false;
+            subtitles = MOCK_SUBS;
+            
+            emptyState.classList.add('hidden');
+            resultsView.classList.remove('hidden');
+            statusIndicator.classList.remove('animate-pulse-soft', 'bg-orange-500');
+            statusIndicator.classList.add('bg-green-500');
+
+            renderSubtitles();
+        }
+
+        function renderSubtitles() {
+            subtitleList.innerHTML = '';
+            subtitles.forEach((sub, idx) => {
+                const isActive = idx === 0;
+                const subEl = document.createElement('div');
+                subEl.className = `flex gap-4 p-4 rounded-xl border transition-all cursor-pointer ${isActive ? 'bg-blue-500/10 border-blue-500/20' : 'bg-slate-800/40 border-transparent hover:border-white/5'}`;
+                
+                subEl.innerHTML = `
+                    <span class="text-[10px] font-mono w-24 shrink-0 mt-0.5 ${isActive ? 'text-blue-400' : 'text-slate-500'}">${sub.start}</span>
+                    <p class="text-sm leading-relaxed ${isActive ? 'text-slate-100 font-medium' : 'text-slate-400'}">${sub.text}</p>
+                `;
+
+                subEl.addEventListener('click', () => {
+                    // Update preview
+                    previewSubtitle.querySelector('span').textContent = sub.text;
+                    // Update list styles
+                    document.querySelectorAll('#subtitle-list > div').forEach(el => {
+                        el.classList.remove('bg-blue-500/10', 'border-blue-500/20');
+                        el.classList.add('bg-slate-800/40', 'border-transparent');
+                        el.querySelector('span').classList.replace('text-blue-400', 'text-slate-500');
+                        el.querySelector('p').classList.replace('text-slate-100', 'text-slate-400');
+                        el.querySelector('p').classList.remove('font-medium');
+                    });
+                    subEl.classList.add('bg-blue-500/10', 'border-blue-500/20');
+                    subEl.classList.remove('bg-slate-800/40', 'border-transparent');
+                    subEl.querySelector('span').classList.replace('text-slate-500', 'text-blue-400');
+                    subEl.querySelector('p').classList.replace('text-slate-400', 'text-slate-100');
+                    subEl.querySelector('p').classList.add('font-medium');
+                });
+
+                subtitleList.appendChild(subEl);
+            });
+        }
+
+        function downloadSRT() {
+            if (subtitles.length === 0) return;
+            
+            const srtContent = subtitles.map(sub => 
+                `${sub.id}\n${sub.start} --> ${sub.end}\n${sub.text}\n`
+            ).join('\n');
+
+            const blob = new Blob([srtContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (selectedFile.name.split('.')[0] || 'subtitles') + '.srt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function showError(text) {
+            errorText.textContent = text;
+            errorMsg.classList.remove('hidden');
+            setTimeout(hideError, 5000);
+        }
+
+        function hideError() {
+            errorMsg.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
