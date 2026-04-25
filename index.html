@@ -39,6 +39,17 @@
         .animate-pulse-soft {
             animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
+
+        .loading-shimmer {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
     </style>
 </head>
 <body class="bg-[#0B0E14] text-white min-h-screen flex flex-col p-4 md:p-8 selection:bg-blue-500/30">
@@ -52,9 +63,11 @@
             </div>
             <span class="text-xl font-bold tracking-tight">SubAI <span class="text-blue-400">Pro</span></span>
         </div>
+        <div id="model-status" class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/60 border border-white/5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <span id="model-dot" class="w-2 h-2 rounded-full bg-yellow-500"></span>
+            <span id="model-text">Loading Model...</span>
+        </div>
         <div class="hidden md:flex gap-8 text-sm font-medium text-slate-400 items-center">
-            <a href="#" class="hover:text-white transition-colors">Templates</a>
-            <a href="#" class="hover:text-white transition-colors">Languages</a>
             <a href="#" class="hover:text-white transition-colors">Pricing</a>
             <a href="#" class="text-white bg-white/5 px-4 py-1.5 rounded-full border border-white/10 hover:bg-white/10 transition-colors">Documentation</a>
         </div>
@@ -71,7 +84,7 @@
                     <span class="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-300">in Seconds.</span>
                 </h1>
                 <p id="hero-desc" class="text-slate-400 text-lg max-w-md opacity-0 transition-opacity duration-1000 delay-300">
-                    Our neural engine analyzes tone, pacing, and syntax to generate human-grade .srt files for your video gallery.
+                    Browser-based speech-to-text. No files leave your computer. Fast, private, and secure.
                 </p>
             </div>
 
@@ -84,8 +97,8 @@
                         </svg>
                     </div>
                     <div class="text-center">
-                        <p class="font-semibold">Click to upload video</p>
-                        <p class="text-sm text-slate-500">MP4, MOV, or MP3 (Max 2GB)</p>
+                        <p class="font-semibold">Drop audio/video file</p>
+                        <p class="text-sm text-slate-500">MP4, MOV, MP3, WAV (Max 50MB for best stability)</p>
                     </div>
                 </div>
 
@@ -93,7 +106,7 @@
                     <div class="flex items-center justify-between bg-slate-800/40 p-4 rounded-2xl border border-white/5 mb-4">
                         <div class="flex items-center gap-4">
                             <div class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center">
-                                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg id="file-icon" class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                 </svg>
                             </div>
@@ -111,15 +124,16 @@
                     
                     <div id="processing-state" class="hidden space-y-2">
                         <div class="flex justify-between text-[10px] font-bold uppercase text-blue-400">
-                            <span>Analyzing Audio...</span>
+                            <span id="progress-action">Decoding Audio...</span>
                             <span id="progress-text">0%</span>
                         </div>
                         <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
                             <div id="progress-bar" class="h-full bg-blue-500 w-0 transition-all duration-300"></div>
                         </div>
+                        <p id="transcription-status" class="text-[10px] text-slate-500 italic">This usually takes a few moments...</p>
                     </div>
 
-                    <button id="btn-generate" class="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center gap-2">
+                    <button id="btn-generate" class="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                         Generate Subtitles
                     </button>
                 </div>
@@ -130,12 +144,12 @@
             <!-- Feature Highlights -->
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-slate-900/60 p-4 rounded-2xl border border-white/5">
-                    <div class="text-blue-400 text-[10px] font-bold uppercase tracking-wider mb-1">Accuracy</div>
-                    <div class="text-xl font-bold">99.4%</div>
+                    <div class="text-blue-400 text-[10px] font-bold uppercase tracking-wider mb-1">Compute</div>
+                    <div class="text-sm font-bold">Local WASM</div>
                 </div>
                 <div class="bg-slate-900/60 p-4 rounded-2xl border border-white/5">
-                    <div class="text-indigo-400 text-[10px] font-bold uppercase tracking-wider mb-1">Speed</div>
-                    <div class="text-xl font-bold">30x Real-time</div>
+                    <div class="text-indigo-400 text-[10px] font-bold uppercase tracking-wider mb-1">Model</div>
+                    <div class="text-sm font-bold">Whisper Tiny</div>
                 </div>
             </div>
 
@@ -152,10 +166,10 @@
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-sm font-bold flex items-center gap-2 uppercase tracking-widest text-slate-400">
                     <span id="status-indicator" class="w-2 h-2 rounded-full bg-green-500"></span>
-                    Editor Preview
+                    Transcription Output
                 </h2>
                 <div class="flex gap-2">
-                    <button class="px-3 py-1 bg-white/5 hover:bg-white/10 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors border border-white/5">Translate</button>
+                    <button class="px-3 py-1 bg-white/5 hover:bg-white/10 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors border border-white/5">Auto-Correction</button>
                     <button class="px-3 py-1 bg-white/5 hover:bg-white/10 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors border border-white/5">Sync</button>
                 </div>
             </div>
@@ -167,26 +181,11 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
                     </svg>
                 </div>
-                <p class="text-sm font-medium">Upload a file to start transcribing</p>
+                <p class="text-sm font-medium">Results will appear here after processing</p>
             </div>
 
             <!-- Results View -->
             <div id="results-view" class="hidden flex-col h-full overflow-hidden">
-                <!-- Mock Video Placeholder -->
-                <div class="aspect-video w-full bg-black rounded-2xl relative overflow-hidden flex items-center justify-center border border-slate-800 mb-6 group cursor-pointer shadow-inner">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                    <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-all">
-                        <svg class="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.333-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"></path>
-                        </svg>
-                    </div>
-                    <div id="preview-subtitle" class="absolute bottom-8 left-4 right-4 text-center">
-                        <span class="bg-black/70 px-4 py-1.5 rounded text-sm md:text-base font-medium border border-white/10 backdrop-blur-md">
-                            Welcome to the future of AI transcription.
-                        </span>
-                    </div>
-                </div>
-
                 <!-- Subtitle List -->
                 <div id="subtitle-list" class="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin">
                     <!-- JS will populate this -->
@@ -198,10 +197,7 @@
                         <svg class="w-5 h-5 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                         </svg>
-                        Download .SRT
-                    </button>
-                    <button class="bg-slate-800 text-white px-6 py-3 rounded-xl hover:bg-slate-700 transition-colors font-bold text-sm">
-                        Burn to Video
+                        Export as .SRT
                     </button>
                 </div>
             </div>
@@ -210,15 +206,21 @@
 
     <!-- Footer -->
     <footer class="mt-auto flex flex-col md:flex-row justify-between items-center text-[10px] text-slate-600 font-medium uppercase tracking-[0.2em] max-w-7xl mx-auto w-full gap-4 pt-8 border-t border-white/5">
-        <div>v2.4.0 Engine Loaded</div>
+        <div>Whisper Engine: v2.0-stable</div>
         <div class="flex gap-8">
-            <a href="#" class="hover:text-slate-400 transition-colors">Privacy Policy</a>
-            <a href="#" class="hover:text-slate-400 transition-colors">Terms of Service</a>
+            <a href="#" class="hover:text-slate-400 transition-colors">Privacy</a>
+            <a href="#" class="hover:text-slate-400 transition-colors">Terms</a>
             <span class="text-slate-400/50">© 2024 SubAI Labs</span>
         </div>
     </footer>
 
-    <script>
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+
+        // Configuration
+        env.allowLocalModels = false;
+        env.useBrowserCache = true;
+
         // DOM Elements
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
@@ -231,31 +233,51 @@
         const processingState = document.getElementById('processing-state');
         const progressBar = document.getElementById('progress-bar');
         const progressText = document.getElementById('progress-text');
+        const progressAction = document.getElementById('progress-action');
         const emptyState = document.getElementById('empty-state');
         const resultsView = document.getElementById('results-view');
         const subtitleList = document.getElementById('subtitle-list');
         const statusIndicator = document.getElementById('status-indicator');
-        const previewSubtitle = document.getElementById('preview-subtitle');
         const btnDownload = document.getElementById('btn-download');
         const errorMsg = document.getElementById('error-msg');
         const errorText = document.getElementById('error-text');
+        const modelStatusDot = document.getElementById('model-dot');
+        const modelStatusText = document.getElementById('model-text');
+        const transcriptionStatus = document.getElementById('transcription-status');
 
         // State
         let selectedFile = null;
         let isProcessing = false;
         let subtitles = [];
+        let transcriber = null;
+        let isModelLoaded = false;
 
-        // Mock data
-        const MOCK_SUBS = [
-            { id: 1, start: '00:00:01,000', end: '00:00:04,500', text: 'Welcome to the future of AI transcription.' },
-            { id: 2, start: '00:00:05,000', end: '00:00:08,200', text: 'Our neural engine analyzes tone, pacing, and syntax.' },
-            { id: 3, start: '00:00:09,000', end: '00:00:12,100', text: 'Supporting over 45 languages with dialect detection.' },
-            { id: 4, start: '00:00:13,000', end: '00:00:16,500', text: 'Create frame-perfect synchronization in seconds.' },
-            { id: 5, start: '00:00:17,000', end: '00:00:20,000', text: 'The result is a human-grade .srt file ready for use.' }
-        ];
+        // Model Loader
+        async function loadModel() {
+            try {
+                transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en', {
+                    progress_callback: (data) => {
+                        if (data.status === 'progress') {
+                            modelStatusText.textContent = `Downloading: ${Math.round(data.progress)}%`;
+                        } else if (data.status === 'loaded') {
+                            modelStatusText.textContent = 'Model Ready (WASM)';
+                        }
+                    }
+                });
+                isModelLoaded = true;
+                modelStatusText.textContent = 'Model Ready (Local)';
+                modelStatusDot.classList.replace('bg-yellow-500', 'bg-green-500');
+                btnGenerate.disabled = false;
+            } catch (err) {
+                showError('Failed to load local engine. Check your connection.');
+                modelStatusText.textContent = 'Engine Offline';
+                modelStatusDot.classList.replace('bg-yellow-500', 'bg-red-500');
+            }
+        }
 
-        // Init animations
+        // Init
         window.addEventListener('DOMContentLoaded', () => {
+            loadModel();
             setTimeout(() => {
                 document.getElementById('hero-title').classList.remove('opacity-0', 'translate-y-4');
                 document.getElementById('hero-desc').classList.remove('opacity-0');
@@ -264,7 +286,7 @@
 
         // Event Listeners
         dropZone.addEventListener('click', () => {
-            if (!selectedFile) fileInput.click();
+            if (!selectedFile && !isProcessing) fileInput.click();
         });
 
         fileInput.addEventListener('change', (e) => {
@@ -295,14 +317,99 @@
 
         btnGenerate.addEventListener('click', (e) => {
             e.stopPropagation();
-            startProcessing();
+            if (!isModelLoaded) return;
+            startTranscription();
         });
 
         btnDownload.addEventListener('click', () => {
             downloadSRT();
         });
 
-        // Functions
+        // Transcription Logic
+        async function startTranscription() {
+            if (isProcessing || !selectedFile) return;
+            
+            isProcessing = true;
+            btnGenerate.classList.add('hidden');
+            processingState.classList.remove('hidden');
+            statusIndicator.classList.add('animate-pulse-soft', 'bg-orange-500');
+            statusIndicator.classList.remove('bg-green-500');
+            
+            progressBar.style.width = '10%';
+            progressText.textContent = '10%';
+            progressAction.textContent = 'Loading Audio...';
+
+            try {
+                // 1. ArrayBuffer
+                const buffer = await selectedFile.arrayBuffer();
+                
+                // 2. Decode Audio
+                progressAction.textContent = 'Decoding...';
+                progressBar.style.width = '30%';
+                progressText.textContent = '30%';
+                
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const decodedAudio = await audioCtx.decodeAudioData(buffer);
+                const audioData = decodedAudio.getChannelData(0); // Mono
+
+                // 3. Run Inference
+                progressAction.textContent = 'Transcribing...';
+                progressBar.style.width = '50%';
+                progressText.textContent = '50%';
+                transcriptionStatus.textContent = 'Neural engine is analyzing waveform...';
+
+                // We use chunking or just run on whole if it's small
+                const output = await transcriber(audioData, {
+                    chunk_length_s: 30,
+                    stride_length_s: 5,
+                    return_timestamps: true,
+                    force_full_sequences: false
+                });
+
+                // 4. Process Output
+                progressBar.style.width = '90%';
+                progressText.textContent = '90%';
+                progressAction.textContent = 'Finalizing...';
+
+                subtitles = formatResults(output.chunks);
+                
+                progressBar.style.width = '100%';
+                progressText.textContent = '100%';
+                
+                setTimeout(() => {
+                    completeProcessing();
+                }, 500);
+
+            } catch (err) {
+                console.error(err);
+                showError('Transcription failed. The file might be too large or corrupted.');
+                isProcessing = false;
+                btnGenerate.classList.remove('hidden');
+                processingState.classList.add('hidden');
+            }
+        }
+
+        function formatResults(chunks) {
+            return chunks.map((chunk, i) => {
+                const [start, end] = chunk.timestamp;
+                return {
+                    id: i + 1,
+                    start: formatTimestamp(start),
+                    end: formatTimestamp(end || (start + 2)), // fallback if end is missing
+                    text: chunk.text.trim()
+                };
+            }).filter(s => s.text.length > 0);
+        }
+
+        function formatTimestamp(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            const ms = Math.floor((seconds % 1) * 1000);
+            
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+        }
+
         function handleFile(file) {
             if (!file) return;
 
@@ -311,6 +418,11 @@
 
             if (!isValid) {
                 showError('Please upload a valid audio or video file.');
+                return;
+            }
+
+            if (file.size > 50 * 1024 * 1024) {
+                showError('File is too large for local processing (Limit: 50MB).');
                 return;
             }
 
@@ -340,32 +452,8 @@
             progressBar.style.width = '0%';
         }
 
-        function startProcessing() {
-            if (isProcessing) return;
-            
-            isProcessing = true;
-            btnGenerate.classList.add('hidden');
-            processingState.classList.remove('hidden');
-            statusIndicator.classList.add('animate-pulse-soft', 'bg-orange-500');
-            statusIndicator.classList.remove('bg-green-500');
-
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += Math.random() * 8;
-                if (progress >= 100) {
-                    progress = 100;
-                    clearInterval(interval);
-                    completeProcessing();
-                }
-                progressBar.style.width = progress + '%';
-                progressText.textContent = Math.round(progress) + '%';
-            }, 300);
-        }
-
         function completeProcessing() {
             isProcessing = false;
-            subtitles = MOCK_SUBS;
-            
             emptyState.classList.add('hidden');
             resultsView.classList.remove('hidden');
             statusIndicator.classList.remove('animate-pulse-soft', 'bg-orange-500');
@@ -376,32 +464,25 @@
 
         function renderSubtitles() {
             subtitleList.innerHTML = '';
+            if (subtitles.length === 0) {
+                subtitleList.innerHTML = '<div class="text-center text-slate-500 py-8">No speech detected in this audio.</div>';
+                return;
+            }
+
             subtitles.forEach((sub, idx) => {
-                const isActive = idx === 0;
                 const subEl = document.createElement('div');
-                subEl.className = `flex gap-4 p-4 rounded-xl border transition-all cursor-pointer ${isActive ? 'bg-blue-500/10 border-blue-500/20' : 'bg-slate-800/40 border-transparent hover:border-white/5'}`;
+                subEl.className = `flex gap-4 p-4 rounded-xl border transition-all cursor-pointer bg-slate-800/40 border-transparent hover:border-white/5`;
                 
                 subEl.innerHTML = `
-                    <span class="text-[10px] font-mono w-24 shrink-0 mt-0.5 ${isActive ? 'text-blue-400' : 'text-slate-500'}">${sub.start}</span>
-                    <p class="text-sm leading-relaxed ${isActive ? 'text-slate-100 font-medium' : 'text-slate-400'}">${sub.text}</p>
+                    <span class="text-[10px] font-mono w-24 shrink-0 mt-0.5 text-slate-500">${sub.start}</span>
+                    <div class="flex-1">
+                        <p class="text-sm leading-relaxed text-slate-400 focus:text-white focus:outline-none" contenteditable="true">${sub.text}</p>
+                    </div>
                 `;
 
-                subEl.addEventListener('click', () => {
-                    // Update preview
-                    previewSubtitle.querySelector('span').textContent = sub.text;
-                    // Update list styles
-                    document.querySelectorAll('#subtitle-list > div').forEach(el => {
-                        el.classList.remove('bg-blue-500/10', 'border-blue-500/20');
-                        el.classList.add('bg-slate-800/40', 'border-transparent');
-                        el.querySelector('span').classList.replace('text-blue-400', 'text-slate-500');
-                        el.querySelector('p').classList.replace('text-slate-100', 'text-slate-400');
-                        el.querySelector('p').classList.remove('font-medium');
-                    });
-                    subEl.classList.add('bg-blue-500/10', 'border-blue-500/20');
-                    subEl.classList.remove('bg-slate-800/40', 'border-transparent');
-                    subEl.querySelector('span').classList.replace('text-slate-500', 'text-blue-400');
-                    subEl.querySelector('p').classList.replace('text-slate-400', 'text-slate-100');
-                    subEl.querySelector('p').classList.add('font-medium');
+                // Update text state when user edits
+                subEl.querySelector('p').addEventListener('blur', (e) => {
+                    sub.text = e.target.textContent;
                 });
 
                 subtitleList.appendChild(subEl);
@@ -418,8 +499,9 @@
             const blob = new Blob([srtContent], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
+            const cleanName = selectedFile.name.replace(/\.[^/.]+$/, "");
             a.href = url;
-            a.download = (selectedFile.name.split('.')[0] || 'subtitles') + '.srt';
+            a.download = `${cleanName}_subtitles.srt`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -429,7 +511,7 @@
         function showError(text) {
             errorText.textContent = text;
             errorMsg.classList.remove('hidden');
-            setTimeout(hideError, 5000);
+            setTimeout(hideError, 8000);
         }
 
         function hideError() {
