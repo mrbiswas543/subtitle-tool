@@ -209,8 +209,13 @@
                     </div>
                 </div>
 
-                <div id="bn-note" class="hidden p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl text-[10px] text-blue-400 leading-relaxed italic">
-                    Note: For best Bengali (বাংলা) results, use Accurate Mode and ensure audio is clear with minimal background noise.
+                <div id="bn-note" class="hidden space-y-2">
+                    <div class="p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl text-[10px] text-blue-400 leading-relaxed italic">
+                         Accurate Mode is highly recommended for Bengali (বাংলা) transcription.
+                    </div>
+                    <div class="p-3 bg-yellow-500/5 border border-yellow-500/10 rounded-xl text-[10px] text-yellow-500/80 leading-relaxed">
+                        ⚠️ For best results, ensure original audio is clear with minimal background noise.
+                    </div>
                 </div>
             </div>
 
@@ -269,13 +274,21 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="flex gap-4 pt-6 mt-4 border-t border-slate-800">
-                    <button id="btn-download" class="flex-1 bg-white text-black font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 group">
-                        <svg class="w-5 h-5 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                        </svg>
-                        Export as .SRT
-                    </button>
+                <div class="flex flex-col gap-3 pt-6 mt-4 border-t border-slate-800">
+                    <div class="flex gap-4">
+                        <button id="btn-download" class="flex-1 bg-white text-black font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 group">
+                            <svg class="w-5 h-5 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Export as .SRT
+                        </button>
+                        <button id="btn-retry" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 border border-white/5 whitespace-nowrap">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            Improve Accuracy
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -446,6 +459,7 @@
         const subtitleList = document.getElementById('subtitle-list');
         const statusIndicator = document.getElementById('status-indicator');
         const btnDownload = document.getElementById('btn-download');
+        const btnRetry = document.getElementById('btn-retry');
         const btnCopyText = document.getElementById('btn-copy-text');
         const btnShareLink = document.getElementById('btn-share-link');
         const btnShareWhatsapp = document.getElementById('btn-share-whatsapp');
@@ -483,7 +497,20 @@
             'bangla': 'বাংলা',
             'bengali': 'বাংলা',
             'shagoto': 'স্বাগত',
-            'shagotom': 'স্বাগতম'
+            'shagotom': 'স্বাগতম',
+            'keno': 'কেন',
+            'kemon': 'কেমন',
+            'achen': 'আছেন',
+            'khabar': 'খাবার',
+            'rasta': 'রাস্তা',
+            'manush': 'মানুষ',
+            'desh': 'দেশ',
+            'shomoy': 'সময়',
+            'shokal': 'সকাল',
+            'raat': 'রাত',
+            'bhalobasha': 'ভালোবাসা',
+            'dukkho': 'দুঃখ',
+            'shuk': 'সুখ'
         };
 
         // Model Loader
@@ -574,6 +601,15 @@
             loadSample();
         });
 
+        btnDownload.addEventListener('click', () => {
+            downloadSRT();
+        });
+
+        btnRetry.addEventListener('click', () => {
+            if (isProcessing || !selectedFile) return;
+            startTranscription();
+        });
+
         modeFast.addEventListener('click', () => {
             updateModeButtons('fast');
             loadModel('Xenova/whisper-tiny');
@@ -653,8 +689,8 @@
         }
 
         // Transcription Logic
-        async function startTranscription() {
-            if (isProcessing || !selectedFile) return;
+        async function startTranscription(retryCount = 0) {
+            if (isProcessing && retryCount === 0 || !selectedFile) return;
             
             isProcessing = true;
             btnGenerate.classList.add('hidden');
@@ -689,7 +725,15 @@
                 const task = 'transcribe';
 
                 // Force language and task parameters for better script extraction
-                const options = {
+                const options = retryCount > 0 ? {
+                    chunk_length_s: 30,
+                    stride_length_s: 5,
+                    language: targetLanguage,
+                    task: task,
+                    return_timestamps: true,
+                    force_full_sequences: false,
+                    temperature: 0.2 // Lower temp for more stable output on retry
+                } : {
                     chunk_length_s: 30,
                     stride_length_s: 5,
                     language: targetLanguage,
@@ -698,8 +742,19 @@
                     force_full_sequences: false
                 };
 
-                // For Bengali, we might want to tweak decoding but native auto handles well in 'base'
                 const output = await transcriber(audioData, options);
+
+                // Check if Bengali output is mostly Latin characters when it shouldn't be
+                if (targetLanguage === 'bn' && retryCount === 0) {
+                    const latinCharCount = (output.text.match(/[a-zA-Z]/g) || []).length;
+                    const bnCharCount = (output.text.match(/[\u0980-\u09FF]/g) || []).length;
+                    
+                    if (latinCharCount > bnCharCount && output.text.length > 20) {
+                        console.log('Detected mostly Latin characters for Bengali. Retrying with higher precision...');
+                        startTranscription(retryCount + 1);
+                        return;
+                    }
+                }
 
                 // 4. Process Output
                 progressBar.style.width = '90%';
@@ -725,43 +780,81 @@
         }
 
         function formatResults(rawChunks, lang = 'en') {
-            const formatted = [];
+            let processedChunks = [];
             let currentId = 1;
 
+            // First pass: Cleanup and character filtering
             for (const chunk of rawChunks) {
                 const [start, end] = chunk.timestamp;
                 const endTime = end || (start + 2);
                 let text = chunk.text.trim();
 
-                // Advanced Text Processing: Fix repeated words, filler, and capitalization
+                // Basic cleanup
                 text = text
                     .replace(/\b(\w+)\s+\1\b/gi, '$1') // Remove immediate word repetitions
                     .replace(/^(um|uh|er|ah|like|you know)\s+/gi, '') // Remove starting fillers
                     .replace(/\s+/g, ' '); // Normalize spaces
-                
-                // Bengali-specific cleanup and correction
+
+                // Language-specific filtering for Bengali
                 if (lang === 'bn') {
-                    text = correctBengaliText(text);
+                    const latinChars = (text.match(/[a-zA-Z]/g) || []).length;
+                    const bnChars = (text.match(/[\u0980-\u09FF]/g) || []).length;
+                    
+                    // If Bengali selected, and text is mostly Latin, try to correct it or skip if too low quality
+                    if (latinChars > bnChars && text.length > 5) {
+                        text = correctBengaliText(text);
+                        // Re-check
+                        const stillLatin = (text.match(/[a-zA-Z]/g) || []).length > (text.match(/[\u0980-\u09FF]/g) || []).length;
+                        if (stillLatin && text.length > 10) continue; // Skip garbage romanized lines
+                    } else {
+                        text = correctBengaliText(text); // Still apply mapping
+                    }
+                    
+                    // Force Bengali Punctuation
+                    text = text.replace(/[.?!]/g, (m) => m === '.' ? '।' : m);
                 } else if (text.length > 0) {
                     text = text.charAt(0).toUpperCase() + text.slice(1);
                 }
 
-                // Noise Removal (e.g., 4.4.4.4 patterns or garbage strings)
-                if (/^(\d\.?)+$/.test(text) || text.length < 2) continue;
+                // Noise Removal (e.g., repeating periods, numbers or garbage strings)
+                if (/^(\d\.?)+$/.test(text) || text.length < 2 || text.match(/[.]{3,}/)) continue;
 
-                // 1. Check if splitting is needed (either duration > 5s or length > 42 chars)
-                const duration = endTime - start;
-                if (duration > 5 || text.length > 42) {
-                    const segments = splitTextSmartly(text, 42, lang);
-                    const totalChars = text.length;
+                processedChunks.push({ start, end: endTime, text });
+            }
 
-                    let lastTime = start;
+            // Second pass: Merge very short segments (under 1.5s) if they are close
+            const merged = [];
+            for (let i = 0; i < processedChunks.length; i++) {
+                const current = processedChunks[i];
+                if (merged.length > 0) {
+                    const last = merged[merged.length - 1];
+                    const gap = current.start - last.end;
+                    const lastDuration = last.end - last.start;
+                    
+                    if (lastDuration < 1.5 && gap < 0.5 && (last.text.length + current.text.length) < 40) {
+                        last.end = current.end;
+                        last.text += ' ' + current.text;
+                        continue;
+                    }
+                }
+                merged.push(current);
+            }
+
+            // Final formatting and splitting
+            const finalResults = [];
+            for (const chunk of merged) {
+                const duration = chunk.end - chunk.start;
+                if (duration > 5 || chunk.text.length > 40) {
+                    const segments = splitTextSmartly(chunk.text, 40, lang);
+                    const totalChars = chunk.text.length;
+
+                    let lastTime = chunk.start;
                     segments.forEach((segText, index) => {
                         const segRatio = segText.length / totalChars;
                         const segDuration = duration * segRatio;
-                        const segEnd = (index === segments.length - 1) ? endTime : lastTime + segDuration;
+                        const segEnd = (index === segments.length - 1) ? chunk.end : lastTime + segDuration;
 
-                        formatted.push({
+                        finalResults.push({
                             id: currentId++,
                             start: formatTimestamp(lastTime),
                             end: formatTimestamp(segEnd),
@@ -770,33 +863,36 @@
                         lastTime = segEnd;
                     });
                 } else {
-                    formatted.push({
+                    finalResults.push({
                         id: currentId++,
-                        start: formatTimestamp(start),
-                        end: formatTimestamp(endTime),
-                        text: text
+                        start: formatTimestamp(chunk.start),
+                        end: formatTimestamp(chunk.end),
+                        text: chunk.text
                     });
                 }
             }
 
-            // Low quality check
-            if (formatted.length === 0 && rawChunks.length > 0) {
-                showError('Audio might be too noisy for high-quality transcription.');
+            if (finalResults.length === 0 && rawChunks.length > 0) {
+                showError('Could not process results. Try Accurate Mode or a cleaner file.');
             }
 
-            return formatted.filter(s => s.text.length > 0);
+            return finalResults;
         }
 
         function correctBengaliText(text) {
-            // 1. Convert specific romanized words to native script
-            let corrected = text.toLowerCase();
+            // Pattern-based cleanup for romanized Bengali
+            let corrected = text;
+
+            // 1. Heuristic: Convert common roman patterns if they look like they were supposed to be Bengali
+            // This is basic but helps with mixed outputs
             for (const [rom, nat] of Object.entries(bnCorrectionMap)) {
                 const regex = new RegExp(`\\b${rom}\\b`, 'gi');
                 corrected = corrected.replace(regex, nat);
             }
 
-            // 2. Remove nonsensical repeated numbers/symbols
-            corrected = corrected.replace(/\d+\.\d+(\.\d+)*/g, ''); 
+            // 2. Remove nonsensical repeated patterns (e.g. 4.4.4.4)
+            corrected = corrected.replace(/(\d\.)+\d/g, ''); 
+            corrected = corrected.replace(/(\s\.)+/g, '.');
             
             return corrected.trim();
         }
